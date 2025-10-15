@@ -1,0 +1,43 @@
+#!/bin/bash
+
+# ┌──────────────────┐
+# │ tmux-sessionizer │
+# └──────────────────┘
+# Quickly create or jump between tmux sessions
+
+# Start config
+subdirs=(
+  # Get subdirectories inside ~/dev
+  ~/dev/*
+  # Add more subdirectories here
+)
+# End config
+
+if [[ $# -eq 1 ]]; then
+  selected_dir=$1
+else
+  # Add `fzf --delimiter / --with-nth -1` if want to display only basename with fzf
+  selected_dir=$(
+    (
+      find "${subdirs[@]}" -mindepth 1 -maxdepth 1 -type d
+      printf "%s\n" "${dirs[@]}"
+    ) | fzf
+  )
+fi
+
+if [[ -z $selected_dir ]]; then
+  printf "No directory was selected\n"
+  exit 0
+fi
+
+session_name=$(basename "$selected_dir" | tr . _)
+
+if ! tmux has-session -t="$session_name" 2>/dev/null; then
+  tmux new-session -ds "$session_name" -c "$selected_dir"
+fi
+
+if [[ -z "$TMUX" ]]; then
+  tmux attach -t="$session_name"
+else
+  tmux switch-client -t="$session_name"
+fi
